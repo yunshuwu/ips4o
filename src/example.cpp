@@ -1,14 +1,13 @@
 /******************************************************************************
- * include/ips4o/utils.hpp
+ * src/example.cpp
  *
- * In-place Parallel Super Scalar Samplesort (IPS⁴o)
+ * In-Place Parallel Super Scalar Samplesort (IPS⁴o)
  *
  ******************************************************************************
  * BSD 2-Clause License
  *
- * Copyright © 2017, Michael Axtmann <michael.axtmann@gmail.com>
- * Copyright © 2017, Daniel Ferizovic <daniel.ferizovic@student.kit.edu>
- * Copyright © 2017, Sascha Witt <sascha.witt@kit.edu>
+ * Copyright © 2020, Michael Axtmann <michael.axtmann@gmail.com>
+ * Copyright © 2020, Sascha Witt <sascha.witt@kit.edu>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,24 +32,31 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#pragma once
+#include <algorithm>
+#include <atomic>
+#include <iostream>
+#include <random>
+#include <vector>
 
-#include "cassert"
+#include "ips4o.hpp"
 
-#define IPS4OML_ASSUME_NOT(c) if (c) __builtin_unreachable()
-#define IPS4OML_IS_NOT(c) assert(!(c))
+int main(int argc, char** argv) {
+    std::random_device r;
+    std::default_random_engine gen(r());
+    std::uniform_real_distribution<double> dist;
 
-#include <limits>
+    std::vector<double> v(1000000);
+    for (auto& e : v) {
+        e = dist(gen);
+    }
 
-namespace ips4o {
-namespace detail {
+    // Sequential case
+    ips4o::sort(v.begin(), v.end(), std::less<>{});
+    // Parallel case
+    // ips4o::parallel::sort(v.begin(), v.end(), std::less<>{});
 
-/**
- * Compute the logarithm to base 2, rounded down.
- */
-inline constexpr unsigned long log2(unsigned long n) {
-    return (std::numeric_limits<unsigned long>::digits - 1 - __builtin_clzl(n));
+    const bool sorted = std::is_sorted(v.begin(), v.end(), std::less<>{});
+    std::cout << "Elements are sorted: " << std::boolalpha << sorted << std::endl;
+
+    return 0;
 }
-
-}  // namespace detail
-}  // namespace ips4o

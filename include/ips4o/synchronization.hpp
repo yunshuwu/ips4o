@@ -1,5 +1,5 @@
 /******************************************************************************
- * ips4o/synchronization.hpp
+ * include/ips4o/synchronization.hpp
  *
  * In-place Parallel Super Scalar Samplesort (IPS⁴o)
  *
@@ -34,8 +34,7 @@
  *****************************************************************************/
 
 #pragma once
-#ifdef _REENTRANT
-
+#if defined(_REENTRANT)
 #include <condition_variable>
 #include <mutex>
 
@@ -137,4 +136,4 @@ void Sync::critical(F&& func) {
 
 }  // namespace detail
 }  // namespace ips4o
-#endif  // _REENTRANT
+#endif  // defined(_REENTRANT)

@@ -1,5 +1,5 @@
 /******************************************************************************
- * ips4o/empty_block_movement.hpp
+ * include/ips4o/empty_block_movement.hpp
  *
  * In-place Parallel Super Scalar Samplesort (IPS⁴o)
  *
@@ -75,11 +75,12 @@ void Sorter<Cfg>::moveEmptyBlocks(const diff_t my_begin, const diff_t my_end,
      *     In this case, thread i moves full blocks from the end of the bucket (from the
      *     stripe of thread i+1) to fill the holes at the end of its stripe.
      *
-     * 3)  The bucket starts in stripe i, crosses more than one stripe boundary, and ends in stripe i+k.
-     *     This is an extension of case 2. In this case, multiple threads work on the same bucket.
-     *     Each thread is responsible for filling the empty blocks in its stripe.
-     *     The left-most thread will take the right-most blocks. Therefore, we count how
-     *     many blocks are fetched by threads to our left before moving our own blocks.
+     * 3)  The bucket starts in stripe i, crosses more than one stripe boundary, and ends
+     *     in stripe i+k. This is an extension of case 2. In this case, multiple threads
+     *     work on the same bucket. Each thread is responsible for filling the empty
+     *     blocks in its stripe. The left-most thread will take the right-most blocks.
+     *     Therefore, we count how many blocks are fetched by threads to our left before
+     *     moving our own blocks.
      */
 
     // Check if last bucket overlaps the end of the stripe
@@ -87,7 +88,8 @@ void Sorter<Cfg>::moveEmptyBlocks(const diff_t my_begin, const diff_t my_end,
     const bool last_bucket_is_overlapping = bucket_end > my_end;
 
     // Case 1)
-    for (int b = bucket_range_start; b < bucket_range_end - last_bucket_is_overlapping; ++b) {
+    for (int b = bucket_range_start; b < bucket_range_end - last_bucket_is_overlapping;
+         ++b) {
         const auto start = Cfg::alignToNextBlock(bucket_start_[b]);
         const auto stop = Cfg::alignToNextBlock(bucket_start_[b + 1]);
         auto read = stop;
@@ -104,10 +106,11 @@ void Sorter<Cfg>::moveEmptyBlocks(const diff_t my_begin, const diff_t my_end,
     // Cases 2) and 3)
     if (last_bucket_is_overlapping) {
         const int overlapping_bucket = bucket_range_end - 1;
-        const auto bucket_start = Cfg::alignToNextBlock(bucket_start_[overlapping_bucket]);
+        const auto bucket_start =
+                Cfg::alignToNextBlock(bucket_start_[overlapping_bucket]);
 
-        // If it is a very large bucket, other threads will also move blocks around in it (case 3)
-        // Count how many filled blocks are in this bucket
+        // If it is a very large bucket, other threads will also move blocks around in it
+        // (case 3) Count how many filled blocks are in this bucket
         diff_t flushed_elements_in_bucket = 0;
         if (bucket_start < my_begin) {
             int prev_id = my_id_ - 1;
@@ -120,14 +123,13 @@ void Sorter<Cfg>::moveEmptyBlocks(const diff_t my_begin, const diff_t my_end,
             // Count blocks in stripe where bucket starts
             const auto eb = shared_->local[prev_id]->first_empty_block;
             // Check if there are any filled blocks in this bucket
-            if (eb > bucket_start)
-                flushed_elements_in_bucket += eb - bucket_start;
+            if (eb > bucket_start) flushed_elements_in_bucket += eb - bucket_start;
         }
 
-        // Threads to our left will move this many blocks (0 if we are the left-most thread)
+        // Threads to our left will move this many blocks (0 if we are the left-most)
         diff_t elements_reserved = 0;
         if (my_begin > bucket_start) {
-            // Thread to the left of us get priority
+            // Threads to the left of us get priority
             elements_reserved = my_begin - bucket_start - flushed_elements_in_bucket;
 
             // Count how many elements we flushed into this bucket
@@ -143,13 +145,16 @@ void Sorter<Cfg>::moveEmptyBlocks(const diff_t my_begin, const diff_t my_end,
         int read_from_thread = my_id_ + 1;
         while (read_from_thread < num_threads_
                && bucket_end > shared_->local[read_from_thread]->first_block) {
-            const auto eb = std::min<diff_t>(shared_->local[read_from_thread]->first_empty_block, bucket_end);
-            flushed_elements_in_bucket += eb - shared_->local[read_from_thread]->first_block;
+            const auto eb = std::min<diff_t>(
+                    shared_->local[read_from_thread]->first_empty_block, bucket_end);
+            flushed_elements_in_bucket +=
+                    eb - shared_->local[read_from_thread]->first_block;
             ++read_from_thread;
         }
 
         // After moving blocks, this will be the first empty block in this bucket
-        const auto first_empty_block_in_bucket = bucket_start + flushed_elements_in_bucket;
+        const auto first_empty_block_in_bucket =
+                bucket_start + flushed_elements_in_bucket;
 
         // This is the range of blocks we want to fill
         auto write_ptr = begin_ + std::max(my_first_empty_block, bucket_start);
@@ -159,8 +164,10 @@ void Sorter<Cfg>::moveEmptyBlocks(const diff_t my_begin, const diff_t my_end,
         while (write_ptr < write_ptr_end) {
             --read_from_thread;
             // This is the range of blocks we can read from stripe 'read_from_thread'
-            auto read_ptr = std::min(shared_->local[read_from_thread]->first_empty_block, bucket_end);
-            auto read_range_size = read_ptr - shared_->local[read_from_thread]->first_block;
+            auto read_ptr = std::min(shared_->local[read_from_thread]->first_empty_block,
+                                     bucket_end);
+            auto read_range_size =
+                    read_ptr - shared_->local[read_from_thread]->first_block;
 
             // Skip reserved blocks
             if (elements_reserved >= read_range_size) {
@@ -178,7 +185,8 @@ void Sorter<Cfg>::moveEmptyBlocks(const diff_t my_begin, const diff_t my_end,
 
         // Set bucket pointers if the bucket starts in this stripe
         if (my_begin <= bucket_start) {
-            bucket_pointers_[overlapping_bucket].set(bucket_start, first_empty_block_in_bucket - Cfg::kBlockSize);
+            bucket_pointers_[overlapping_bucket].set(
+                    bucket_start, first_empty_block_in_bucket - Cfg::kBlockSize);
         }
     }
 }

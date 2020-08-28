@@ -1,5 +1,5 @@
 /******************************************************************************
- * ips4o/sampling.hpp
+ * include/ips4o/sampling.hpp
  *
  * In-place Parallel Super Scalar Samplesort (IPS⁴o)
  *
@@ -40,8 +40,8 @@
 #include <utility>
 
 #include "ips4o_fwd.hpp"
-#include "config.hpp"
 #include "classifier.hpp"
+#include "config.hpp"
 #include "memory.hpp"
 
 namespace ips4o {
@@ -58,7 +58,8 @@ void selectSample(It begin, const It end,
 
     auto n = end - begin;
     while (num_samples--) {
-        const auto i = std::uniform_int_distribution<typename std::iterator_traits<It>::difference_type>(0, --n)(gen);
+        const auto i = std::uniform_int_distribution<
+                typename std::iterator_traits<It>::difference_type>(0, --n)(gen);
         swap(*begin, begin[i]);
         ++begin;
     }
@@ -66,6 +67,7 @@ void selectSample(It begin, const It end,
 
 /**
  * Builds the classifer.
+ * Number of used_buckets is a power of two and at least two.
  */
 template <class Cfg>
 std::pair<int, bool> Sorter<Cfg>::buildClassifier(const iterator begin,
@@ -87,13 +89,13 @@ std::pair<int, bool> Sorter<Cfg>::buildClassifier(const iterator begin,
     const auto comp = classifier.getComparator();
 
     // Choose the splitters
-    IPS4O_ASSUME_NOT(sorted_splitters == nullptr);
+    IPS4OML_ASSUME_NOT(sorted_splitters == nullptr);
     new (sorted_splitters) typename Cfg::value_type(*splitter);
     for (int i = 2; i < num_buckets; ++i) {
         splitter += step;
         // Skip duplicates
         if (comp(*sorted_splitters, *splitter)) {
-            IPS4O_ASSUME_NOT(sorted_splitters + 1 == nullptr);
+            IPS4OML_ASSUME_NOT(sorted_splitters + 1 == nullptr);
             new (++sorted_splitters) typename Cfg::value_type(*splitter);
         }
     }
@@ -107,7 +109,7 @@ std::pair<int, bool> Sorter<Cfg>::buildClassifier(const iterator begin,
     log_buckets = log2(diff_splitters) + 1;
     num_buckets = 1 << log_buckets;
     for (int i = diff_splitters + 1; i < num_buckets; ++i) {
-        IPS4O_ASSUME_NOT(sorted_splitters + 1 == nullptr);
+        IPS4OML_ASSUME_NOT(sorted_splitters + 1 == nullptr);
         new (++sorted_splitters) typename Cfg::value_type(*splitter);
     }
 

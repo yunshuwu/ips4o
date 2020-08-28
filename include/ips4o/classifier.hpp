@@ -1,5 +1,5 @@
 /******************************************************************************
- * ips4o/classifier.hpp
+ * include/ips4o/classifier.hpp
  *
  * In-place Parallel Super Scalar Samplesort (IPS⁴o)
  *
@@ -87,8 +87,9 @@ class Sorter<Cfg>::Classifier {
         log_buckets_ = log_buckets;
         num_buckets_ = 1 << log_buckets;
         const auto num_splitters = (1 << log_buckets) - 1;
-        IPS4O_ASSUME_NOT(getSortedSplitters() + num_splitters == nullptr);
-        new (getSortedSplitters() + num_splitters) value_type(getSortedSplitters()[num_splitters - 1]);
+        IPS4OML_ASSUME_NOT(getSortedSplitters() + num_splitters == nullptr);
+        new (getSortedSplitters() + num_splitters)
+                value_type(getSortedSplitters()[num_splitters - 1]);
         build(getSortedSplitters(), getSortedSplitters() + num_splitters, 1);
     }
 
@@ -99,8 +100,8 @@ class Sorter<Cfg>::Classifier {
     bucket_type classify(const value_type& value) const {
         const int log_buckets = log_buckets_;
         const bucket_type num_buckets = num_buckets_;
-        IPS4O_ASSUME_NOT(log_buckets < 1);
-        IPS4O_ASSUME_NOT(log_buckets > 9);
+        IPS4OML_ASSUME_NOT(log_buckets < 1);
+        IPS4OML_ASSUME_NOT(log_buckets > 9);
 
         bucket_type b = 1;
         for (int l = 0; l < log_buckets; ++l)
@@ -124,7 +125,7 @@ class Sorter<Cfg>::Classifier {
             case 6: classifyUnrolled<kEqualBuckets, 6>(begin, end, std::forward<Yield>(yield)); break;
             case 7: classifyUnrolled<kEqualBuckets, 7>(begin, end, std::forward<Yield>(yield)); break;
             case 8: classifyUnrolled<kEqualBuckets, 8>(begin, end, std::forward<Yield>(yield)); break;
-            default: IPS4O_ASSUME_NOT(true);
+            default: IPS4OML_ASSUME_NOT(true);
         }
     }
 
@@ -135,8 +136,8 @@ class Sorter<Cfg>::Classifier {
     void classifyUnrolled(iterator begin, const iterator end, Yield&& yield) const {
         constexpr const bucket_type kNumBuckets = 1l << (kLogBuckets + kEqualBuckets);
         constexpr const int kUnroll = Cfg::kUnrollClassifier;
-        IPS4O_ASSUME_NOT(begin >= end);
-        IPS4O_ASSUME_NOT(begin > (end - kUnroll));
+        IPS4OML_ASSUME_NOT(begin >= end);
+        IPS4OML_ASSUME_NOT(begin > (end - kUnroll));
 
         bucket_type b[kUnroll];
         for (auto cutoff = end - kUnroll; begin <= cutoff; begin += kUnroll) {
@@ -149,13 +150,14 @@ class Sorter<Cfg>::Classifier {
 
             if (kEqualBuckets)
                 for (int i = 0; i < kUnroll; ++i)
-                    b[i] = 2 * b[i] + !comp_(begin[i], sortedSplitter(b[i] - kNumBuckets / 2));
+                    b[i] = 2 * b[i]
+                           + !comp_(begin[i], sortedSplitter(b[i] - kNumBuckets / 2));
 
             for (int i = 0; i < kUnroll; ++i)
                 yield(b[i] - kNumBuckets, begin + i);
         }
 
-        IPS4O_ASSUME_NOT(begin > end);
+        IPS4OML_ASSUME_NOT(begin > end);
         for (; begin != end; ++begin) {
             bucket_type b = 1;
             for (int l = 0; l < kLogBuckets; ++l)
@@ -172,7 +174,8 @@ class Sorter<Cfg>::Classifier {
     }
 
     const value_type& sortedSplitter(bucket_type i) const {
-        return static_cast<const value_type*>(static_cast<const void*>(sorted_storage_))[i];
+        return static_cast<const value_type*>(
+                static_cast<const void*>(sorted_storage_))[i];
     }
 
     value_type* data() {
@@ -182,9 +185,10 @@ class Sorter<Cfg>::Classifier {
     /**
      * Recursively builds the tree.
      */
-    void build(const value_type* const left, const value_type* const right, const bucket_type pos) {
+    void build(const value_type* const left, const value_type* const right,
+               const bucket_type pos) {
         const auto mid = left + (right - left) / 2;
-        IPS4O_ASSUME_NOT(data() + pos == nullptr);
+        IPS4OML_ASSUME_NOT(data() + pos == nullptr);
         new (data() + pos) value_type(*mid);
         if (2 * pos < num_buckets_) {
             build(left, mid, 2 * pos);
@@ -207,9 +211,11 @@ class Sorter<Cfg>::Classifier {
     }
 
     // Filled from 1 to num_buckets_
-    std::aligned_storage_t<sizeof(value_type), alignof(value_type)> storage_[Cfg::kMaxBuckets / 2];
+    std::aligned_storage_t<sizeof(value_type), alignof(value_type)>
+            storage_[Cfg::kMaxBuckets / 2];
     // Filled from 0 to num_buckets_, last one is duplicated
-    std::aligned_storage_t<sizeof(value_type), alignof(value_type)> sorted_storage_[Cfg::kMaxBuckets / 2];
+    std::aligned_storage_t<sizeof(value_type), alignof(value_type)>
+            sorted_storage_[Cfg::kMaxBuckets / 2];
     int log_buckets_ = 0;
     bucket_type num_buckets_ = 0;
     less comp_;

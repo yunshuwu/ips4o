@@ -1,5 +1,5 @@
 /******************************************************************************
- * ips4o/cleanup_margins.hpp
+ * include/ips4o/cleanup_margins.hpp
  *
  * In-place Parallel Super Scalar Samplesort (IPS⁴o)
  *
@@ -85,6 +85,7 @@ std::pair<int, typename Cfg::difference_type> Sorter<Cfg>::saveMargins(int last_
  * Fills margins from buffers.
  */
 template <class Cfg>
+template <bool kIsParallel>
 void Sorter<Cfg>::writeMargins(const int first_bucket, const int last_bucket,
                                const int overflow_bucket, const int swap_bucket,
                                const diff_t in_swap_buffer) {
@@ -104,11 +105,12 @@ void Sorter<Cfg>::writeMargins(const int first_bucket, const int last_bucket,
             // Is there overflow?
 
             // Overflow buffer has been written => write pointer must be at end of bucket
-            IPS4O_ASSUME_NOT(Cfg::alignToNextBlock(bend) != bwrite);
+            IPS4OML_ASSUME_NOT(Cfg::alignToNextBlock(bend) != bwrite);
 
             auto src = overflow_->data();
             // There must be space for at least BlockSize elements
-            IPS4O_ASSUME_NOT((bend - (bwrite - Cfg::kBlockSize)) + remaining < Cfg::kBlockSize);
+            IPS4OML_ASSUME_NOT((bend - (bwrite - Cfg::kBlockSize)) + remaining
+                               < Cfg::kBlockSize);
             auto tail_size = Cfg::kBlockSize - remaining;
 
             // Fill head
@@ -117,7 +119,7 @@ void Sorter<Cfg>::writeMargins(const int first_bucket, const int last_bucket,
             remaining = std::numeric_limits<diff_t>::max();
 
             // Write remaining elements into tail
-            dst = begin_ + (bwrite - Cfg::kBlockSize);
+            dst = begin_ + bwrite - Cfg::kBlockSize;
             dst = std::move(src, src + tail_size, dst);
 
             overflow_->reset(Cfg::kBlockSize);
@@ -127,7 +129,7 @@ void Sorter<Cfg>::writeMargins(const int first_bucket, const int last_bucket,
             // Bucket of last block in this thread's area => write swap buffer
             auto src = local_.swap[0].data();
             // All elements from the buffer must fit
-            IPS4O_ASSUME_NOT(in_swap_buffer > remaining);
+            IPS4OML_ASSUME_NOT(in_swap_buffer > remaining);
 
             // Write to head
             dst = std::move(src, src + in_swap_buffer, dst);
@@ -136,12 +138,12 @@ void Sorter<Cfg>::writeMargins(const int first_bucket, const int last_bucket,
             local_.swap[0].reset(in_swap_buffer);
         } else if (bwrite > bend && bend - bstart > Cfg::kBlockSize) {
             // Final block has been written => move excess elements to head
-            IPS4O_ASSUME_NOT(Cfg::alignToNextBlock(bend) != bwrite);
+            IPS4OML_ASSUME_NOT(Cfg::alignToNextBlock(bend) != bwrite);
 
             auto src = begin_ + bend;
             auto head_size = bwrite - bend;
             // Must fit, no other empty space left
-            IPS4O_ASSUME_NOT(head_size > remaining);
+            IPS4OML_ASSUME_NOT(head_size > remaining);
 
             // Write to head
             dst = std::move(src, src + head_size, dst);
@@ -150,7 +152,7 @@ void Sorter<Cfg>::writeMargins(const int first_bucket, const int last_bucket,
 
         // Write elements from buffers
         for (int t = 0; t < num_threads_; ++t) {
-            auto& buffers = shared_ ? shared_->local[t]->buffers : local_.buffers;
+            auto& buffers = kIsParallel ? shared_->local[t]->buffers : local_.buffers;
             auto src = buffers.data(i);
             auto count = buffers.size(i);
 
@@ -171,8 +173,20 @@ void Sorter<Cfg>::writeMargins(const int first_bucket, const int last_bucket,
         }
 
         // Perform final base case sort here, while the data is still cached
-        if (is_last_level || (bend - bstart) <= 2 * Cfg::kBaseCaseSize)
+        if (is_last_level
+            || ((bend - bstart <= 2 * Cfg::kBaseCaseSize) && !kIsParallel)) {
+#ifdef IPS4O_TIMER
+            g_cleanup.stop();
+            g_base_case.start();
+#endif
+
             detail::baseCaseSort(begin_ + bstart, begin_ + bend, comp);
+
+#ifdef IPS4O_TIMER
+            g_base_case.stop();
+            g_cleanup.start();
+#endif
+        }
     }
 }
 

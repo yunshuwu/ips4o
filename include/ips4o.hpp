@@ -1,5 +1,5 @@
 /******************************************************************************
- * ips4o.hpp
+ * include/ips4o.hpp
  *
  * In-place Parallel Super Scalar Samplesort (IPS⁴o)
  *

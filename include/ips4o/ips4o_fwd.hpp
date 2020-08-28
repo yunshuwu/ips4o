@@ -1,5 +1,5 @@
 /******************************************************************************
- * ips4o/ips4o_fwd.hpp
+ * include/ips4o/ips4o_fwd.hpp
  *
  * In-place Parallel Super Scalar Samplesort (IPS⁴o)
  *
@@ -36,9 +36,19 @@
 #pragma once
 
 #include <iterator>
+#include <memory>
 #include <utility>
+#include <vector>
+
+#include "config.hpp"
+#include "scheduler.hpp"
+#include "task.hpp"
 
 namespace ips4o {
+
+template <class Cfg>
+class SequentialSorter;
+
 namespace detail {
 
 template <class It, class Comp>
@@ -57,6 +67,7 @@ class Sorter {
     using iterator = typename Cfg::iterator;
     using diff_t = typename Cfg::difference_type;
     using value_type = typename Cfg::value_type;
+    using SubThreadPool = typename Cfg::SubThreadPool;
 
     class BufferStorage;
     class Block;
@@ -69,12 +80,27 @@ class Sorter {
 
     void sequential(iterator begin, iterator end);
 
-#if defined(_REENTRANT) || defined(_OPENMP)
-    template <class TaskSorter>
-    void parallelPrimary(iterator begin, iterator end, SharedData& shared,
-                         int num_threads, TaskSorter&& task_sorter);
+    void sequential(const iterator begin, const Task& task, PrivateQueue<Task>& queue);
 
-    void parallelSecondary(SharedData& shared, int id, int num_threads);
+    void sequential_rec(iterator begin, iterator end);
+
+#if defined(_REENTRANT)
+    void parallelSortPrimary(iterator begin, iterator end, int num_threads,
+                             BufferStorage& buffer_storage,
+                             std::vector<std::shared_ptr<SubThreadPool>>& tp_trash);
+
+    void parallelSortSecondary(iterator begin, iterator end, int id, int num_threads,
+                               BufferStorage& buffer_storage,
+                               std::vector<std::shared_ptr<SubThreadPool>>& tp_trash);
+
+    std::pair<std::vector<diff_t>, bool> parallelPartitionPrimary(iterator begin,
+                                                                  iterator end,
+                                                                  int num_threads);
+
+    void parallelPartitionSecondary(iterator begin, iterator end, int id,
+                                    int num_threads);
+
+    void setShared(SharedData* shared_);
 #endif
 
  private:
@@ -94,10 +120,11 @@ class Sorter {
 
     static inline int computeLogBuckets(diff_t n);
 
-    std::pair<int, bool> buildClassifier(iterator begin, iterator end, Classifier& classifier);
+    std::pair<int, bool> buildClassifier(iterator begin, iterator end,
+                                         Classifier& classifier);
 
-    template <bool kEqualBuckets> __attribute__((flatten))
-    diff_t classifyLocally(iterator my_begin, iterator my_end);
+    template <bool kEqualBuckets>
+    __attribute__((flatten)) diff_t classifyLocally(iterator my_begin, iterator my_end);
 
     inline void parallelClassification(bool use_equal_buckets);
 
@@ -118,20 +145,31 @@ class Sorter {
 
     inline std::pair<int, diff_t> saveMargins(int last_bucket);
 
+    template <bool kIsParallel>
     void writeMargins(int first_bucket, int last_bucket, int overflow_bucket,
                       int swap_bucket, diff_t in_swap_buffer);
 
     template <bool kIsParallel>
     std::pair<int, bool> partition(iterator begin, iterator end, diff_t* bucket_start,
-                                   SharedData* shared, int my_id, int num_threads);
+                                   int my_id, int num_threads);
 
-    inline void processSmallTasks(iterator begin, SharedData& shared);
+    void processSmallTasks(iterator begin, int num_threads);
+
+    void processBigTasks(const iterator begin, const diff_t stripe, const int my_id,
+                         BufferStorage& buffer_storage,
+                         std::vector<std::shared_ptr<SubThreadPool>>& tp_trash);
+
+    void processBigTaskPrimary(const iterator begin, const diff_t stripe, const int my_id,
+                               BufferStorage& buffer_storage,
+                               std::vector<std::shared_ptr<SubThreadPool>>& tp_trash);
+    void processBigTasksSecondary(const int my_id, BufferStorage& buffer_storage);
+
+    void queueTasks(const diff_t stripe, const int id, const int num_threads,
+                    const diff_t parent_task_size, const diff_t offset,
+                    const diff_t* bucket_start, int num_buckets, bool equal_buckets);
 };
 
 }  // namespace detail
-
-template <class Cfg>
-class SequentialSorter;
 
 template <class Cfg>
 class ParallelSorter;
@@ -142,7 +180,7 @@ inline void sort(It begin, It end, Comp comp);
 template <class It>
 inline void sort(It begin, It end);
 
-#if defined(_REENTRANT) || defined(_OPENMP)
+#if defined(_REENTRANT)
 namespace parallel {
 
 template <class It, class Comp>
@@ -152,5 +190,5 @@ template <class It>
 inline void sort(It begin, It end);
 
 }  // namespace parallel
-#endif
+#endif  // _REENTRANT
 }  // namespace ips4o

@@ -1,5 +1,5 @@
 /******************************************************************************
- * ips4o/config.hpp
+ * include/ips4o/config.hpp
  *
  * In-place Parallel Super Scalar Samplesort (IPS⁴o)
  *
@@ -42,66 +42,69 @@
 #include <type_traits>
 #include <utility>
 
+#if defined(_REENTRANT)
 #include "thread_pool.hpp"
+#endif
+
 #include "utils.hpp"
 
-#ifndef IPS4O_ALLOW_EQUAL_BUCKETS
-#define IPS4O_ALLOW_EQUAL_BUCKETS true
+#ifndef IPS4OML_ALLOW_EQUAL_BUCKETS
+#define IPS4OML_ALLOW_EQUAL_BUCKETS true
 #endif
 
-#ifndef IPS4O_BASE_CASE_SIZE
-#define IPS4O_BASE_CASE_SIZE 16
+#ifndef IPS4OML_BASE_CASE_SIZE
+#define IPS4OML_BASE_CASE_SIZE 16
 #endif
 
-#ifndef IPS4O_BASE_CASE_MULTIPLIER
-#define IPS4O_BASE_CASE_MULTIPLIER 16
+#ifndef IPS4OML_BASE_CASE_MULTIPLIER
+#define IPS4OML_BASE_CASE_MULTIPLIER 16
 #endif
 
-#ifndef IPS4O_BLOCK_SIZE
-#define IPS4O_BLOCK_SIZE (2 << 10)
+#ifndef IPS4OML_BLOCK_SIZE
+#define IPS4OML_BLOCK_SIZE (2 << 10)
 #endif
 
-#ifndef IPS4O_BUCKET_TYPE
-#define IPS4O_BUCKET_TYPE std::ptrdiff_t
+#ifndef IPS4OML_BUCKET_TYPE
+#define IPS4OML_BUCKET_TYPE std::ptrdiff_t
 #endif
 
-#ifndef IPS4O_DATA_ALIGNMENT
-#define IPS4O_DATA_ALIGNMENT (4 << 10)
+#ifndef IPS4OML_DATA_ALIGNMENT
+#define IPS4OML_DATA_ALIGNMENT (4 << 10)
 #endif
 
-#ifndef IPS4O_EQUAL_BUCKETS_THRESHOLD
-#define IPS4O_EQUAL_BUCKETS_THRESHOLD 5
+#ifndef IPS4OML_EQUAL_BUCKETS_THRESHOLD
+#define IPS4OML_EQUAL_BUCKETS_THRESHOLD 5
 #endif
 
-#ifndef IPS4O_LOG_BUCKETS
-#define IPS4O_LOG_BUCKETS 8
+#ifndef IPS4OML_LOG_BUCKETS
+#define IPS4OML_LOG_BUCKETS 8
 #endif
 
-#ifndef IPS4O_MIN_PARALLEL_BLOCKS_PER_THREAD
-#define IPS4O_MIN_PARALLEL_BLOCKS_PER_THREAD 4
+#ifndef IPS4OML_MIN_PARALLEL_BLOCKS_PER_THREAD
+#define IPS4OML_MIN_PARALLEL_BLOCKS_PER_THREAD 4
 #endif
 
-#ifndef IPS4O_OVERSAMPLING_FACTOR_PERCENT
-#define IPS4O_OVERSAMPLING_FACTOR_PERCENT 20
+#ifndef IPS4OML_OVERSAMPLING_FACTOR_PERCENT
+#define IPS4OML_OVERSAMPLING_FACTOR_PERCENT 20
 #endif
 
-#ifndef IPS4O_UNROLL_CLASSIFIER
-#define IPS4O_UNROLL_CLASSIFIER 7
+#ifndef IPS4OML_UNROLL_CLASSIFIER
+#define IPS4OML_UNROLL_CLASSIFIER 7
 #endif
 
 namespace ips4o {
 
-template <bool AllowEqualBuckets_     = IPS4O_ALLOW_EQUAL_BUCKETS
-        , std::ptrdiff_t BaseCase_    = IPS4O_BASE_CASE_SIZE
-        , std::ptrdiff_t BaseCaseM_   = IPS4O_BASE_CASE_MULTIPLIER
-        , std::ptrdiff_t BlockSize_   = IPS4O_BLOCK_SIZE
-        , class BucketT_              = IPS4O_BUCKET_TYPE
-        , std::size_t DataAlign_      = IPS4O_DATA_ALIGNMENT
-        , std::ptrdiff_t EqualBuckTh_ = IPS4O_EQUAL_BUCKETS_THRESHOLD
-        , int LogBuckets_             = IPS4O_LOG_BUCKETS
-        , std::ptrdiff_t MinParBlks_  = IPS4O_MIN_PARALLEL_BLOCKS_PER_THREAD
-        , int OversampleF_            = IPS4O_OVERSAMPLING_FACTOR_PERCENT
-        , int UnrollClass_            = IPS4O_UNROLL_CLASSIFIER
+template <bool AllowEqualBuckets_     = IPS4OML_ALLOW_EQUAL_BUCKETS
+        , std::ptrdiff_t BaseCase_    = IPS4OML_BASE_CASE_SIZE
+        , std::ptrdiff_t BaseCaseM_   = IPS4OML_BASE_CASE_MULTIPLIER
+        , std::ptrdiff_t BlockSize_   = IPS4OML_BLOCK_SIZE
+        , class BucketT_              = IPS4OML_BUCKET_TYPE
+        , std::size_t DataAlign_      = IPS4OML_DATA_ALIGNMENT
+        , std::ptrdiff_t EqualBuckTh_ = IPS4OML_EQUAL_BUCKETS_THRESHOLD
+        , int LogBuckets_             = IPS4OML_LOG_BUCKETS
+        , std::ptrdiff_t MinParBlks_  = IPS4OML_MIN_PARALLEL_BLOCKS_PER_THREAD
+        , int OversampleF_            = IPS4OML_OVERSAMPLING_FACTOR_PERCENT
+        , int UnrollClass_            = IPS4OML_UNROLL_CLASSIFIER
         >
 struct Config {
     /**
@@ -113,7 +116,8 @@ struct Config {
      * Whether we are on 64 bit or 32 bit.
      */
     static constexpr const bool kIs64Bit = sizeof(std::uintptr_t) == 8;
-    static_assert(kIs64Bit || sizeof(std::uintptr_t) == 4, "Architecture must be 32 or 64 bit");
+    static_assert(kIs64Bit || sizeof(std::uintptr_t) == 4,
+                  "Architecture must be 32 or 64 bit");
 
     /**
      * Whether equal buckets can be used.
@@ -147,14 +151,17 @@ struct Config {
      * Minimum number of blocks per thread for which parallelism is used.
      */
     static constexpr const std::ptrdiff_t kMinParallelBlocksPerThread = MinParBlks_;
-    static_assert(kMinParallelBlocksPerThread > 0, "Min. blocks per thread must be at least 1.");
+    static_assert(kMinParallelBlocksPerThread > 0,
+                  "Min. blocks per thread must be at least 1.");
     /**
      * How many times the classification loop is unrolled.
      */
     static constexpr const int kUnrollClassifier = UnrollClass_;
 
-    static constexpr const std::ptrdiff_t kSingleLevelThreshold = kBaseCaseSize * (1ul << kLogBuckets);
-    static constexpr const std::ptrdiff_t kTwoLevelThreshold = kSingleLevelThreshold * (1ul << kLogBuckets);
+    static constexpr const std::ptrdiff_t kSingleLevelThreshold =
+            kBaseCaseSize * (1ul << kLogBuckets);
+    static constexpr const std::ptrdiff_t kTwoLevelThreshold =
+            kSingleLevelThreshold * (1ul << kLogBuckets);
 
     /**
      * The oversampling factor to be used for input of size n.
@@ -169,7 +176,7 @@ struct Config {
     */
     static int logBuckets(const std::ptrdiff_t n) {
         if (n <= kSingleLevelThreshold) {
-            // Only one more level until we reach the base case, reduce the number of buckets
+            // Only one more level until  the base case, reduce the number of buckets
             return std::max(1ul, detail::log2(n / kBaseCaseSize));
         } else if (n <= kTwoLevelThreshold) {
             // Only two more levels until we reach the base case, split the buckets evenly
@@ -184,9 +191,10 @@ struct Config {
      * Returns the number of threads that should be used for the given input range.
      */
     template <class It>
-#if defined(_REENTRANT) || defined(_OPENMP)
+#if defined(_REENTRANT)
     static constexpr int numThreadsFor(const It& begin, const It& end, int max_threads) {
-        const std::ptrdiff_t blocks = (end - begin) * sizeof(decltype(*begin)) / kBlockSizeInBytes;
+        const std::ptrdiff_t blocks =
+                (end - begin) * sizeof(decltype(*begin)) / kBlockSizeInBytes;
         return (blocks < (kMinParallelBlocksPerThread * max_threads)) ? 1 : max_threads;
 #else
     static constexpr int numThreadsFor(const It&, const It&, int) {
@@ -196,8 +204,8 @@ struct Config {
 };
 
 template <class It_, class Comp_, class Cfg = Config<>
-#if defined(_REENTRANT) || defined(_OPENMP)
-        , class ThreadPool_ = DefaultThreadPool
+#if defined(_REENTRANT)
+          , class ThreadPool_ = DefaultThreadPool
 #endif
         >
 struct ExtendedConfig : public Cfg {
@@ -222,28 +230,57 @@ struct ExtendedConfig : public Cfg {
      */
     using less = Comp_;
 
-#if defined(_REENTRANT) || defined(_OPENMP)
+#if defined(_REENTRANT)
+
     /**
      * Thread pool for parallel algorithm.
      */
     using ThreadPool = ThreadPool_;
 
+    using SubThreadPool = ThreadJoiningThreadPool;
+
     /**
      * Synchronization support for parallel algorithm.
      */
     using Sync = decltype(std::declval<ThreadPool&>().sync());
+
 #else
+
     struct Sync {
         constexpr void barrier() const {}
         template <class F>
         constexpr void single(F&&) const {}
     };
+
+    /**
+     * Dummy thread pool.
+     */
+    class SubThreadPool {
+     public:
+        explicit SubThreadPool(int) {}
+
+        void join(int) {}
+
+        void release_threads() {}
+
+        template <class F>
+        void operator()(F&&, int) {}
+
+        Sync& sync() { return sync_; }
+
+        int numThreads() const { return 1; }
+
+     private:
+        Sync sync_;
+    };
+
 #endif
 
     /**
      * Maximum number of buckets (including equality buckets).
      */
-    static constexpr const int kMaxBuckets = 1ul << (Cfg::kLogBuckets + Cfg::kAllowEqualBuckets);
+    static constexpr const int kMaxBuckets =
+            1ul << (Cfg::kLogBuckets + Cfg::kAllowEqualBuckets);
 
     /**
      * Number of elements in one block.
@@ -256,17 +293,21 @@ struct ExtendedConfig : public Cfg {
 
     // Redefine applicable constants as difference_type.
     static constexpr const difference_type kBaseCaseSize = Cfg::kBaseCaseSize;
-    static constexpr const difference_type kEqualBucketsThreshold = Cfg::kEqualBucketsThreshold;
+    static constexpr const difference_type kEqualBucketsThreshold =
+            Cfg::kEqualBucketsThreshold;
 
     // Cannot sort without random access.
     static_assert(std::is_same<typename std::iterator_traits<iterator>::iterator_category,
-                  std::random_access_iterator_tag>::value, "Iterator must be a random access iterator.");
+                               std::random_access_iterator_tag>::value,
+                  "Iterator must be a random access iterator.");
     // Number of buckets is limited by switch in classifier
     static_assert(Cfg::kLogBuckets <= 8, "Max. bucket count must be <= 512.");
     // The implementation of the block alignment limits the possible block sizes.
-    static_assert((kBlockSize & (kBlockSize - 1)) == 0, "Block size must be a power of two.");
+    static_assert((kBlockSize & (kBlockSize - 1)) == 0,
+                  "Block size must be a power of two.");
     // The main classifier function assumes that the loop can be unrolled at least once.
-    static_assert(Cfg::kUnrollClassifier <= kBaseCaseSize, "Base case size must be larger than unroll factor.");
+    static_assert(Cfg::kUnrollClassifier <= kBaseCaseSize,
+                  "Base case size must be larger than unroll factor.");
 
     /**
      * Aligns an offset to the next block boundary, upwards.
@@ -276,16 +317,16 @@ struct ExtendedConfig : public Cfg {
     }
 };
 
-#undef IPS4O_ALLOW_EQUAL_BUCKETS
-#undef IPS4O_BASE_CASE_SIZE
-#undef IPS4O_BASE_CASE_MULTIPLIER
-#undef IPS4O_BLOCK_SIZE
-#undef IPS4O_BUCKET_TYPE
-#undef IPS4O_DATA_ALIGNMENT
-#undef IPS4O_EQUAL_BUCKETS_THRESHOLD
-#undef IPS4O_LOG_BUCKETS
-#undef IPS4O_MIN_PARALLEL_BLOCKS_PER_THREAD
-#undef IPS4O_OVERSAMPLING_FACTOR_PERCENT
-#undef IPS4O_UNROLL_CLASSIFIER
+#undef IPS4OML_ALLOW_EQUAL_BUCKETS
+#undef IPS4OML_BASE_CASE_SIZE
+#undef IPS4OML_BASE_CASE_MULTIPLIER
+#undef IPS4OML_BLOCK_SIZE
+#undef IPS4OML_BUCKET_TYPE
+#undef IPS4OML_DATA_ALIGNMENT
+#undef IPS4OML_EQUAL_BUCKETS_THRESHOLD
+#undef IPS4OML_LOG_BUCKETS
+#undef IPS4OML_MIN_PARALLEL_BLOCKS_PER_THREAD
+#undef IPS4OML_OVERSAMPLING_FACTOR_PERCENT
+#undef IPS4OML_UNROLL_CLASSIFIER
 
 }  // namespace ips4o

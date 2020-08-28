@@ -1,5 +1,5 @@
 /******************************************************************************
- * ips4o/sequential.hpp
+ * include/ips4o/sequential.hpp
  *
  * In-place Parallel Super Scalar Samplesort (IPS⁴o)
  *
@@ -41,9 +41,54 @@
 #include "base_case.hpp"
 #include "memory.hpp"
 #include "partitioning.hpp"
+#include "scheduler.hpp"
 
 namespace ips4o {
 namespace detail {
+
+#if defined(_REENTRANT)
+
+/**
+ * Recursive entry point for sequential algorithm.
+ */
+template <class Cfg>
+void Sorter<Cfg>::sequential(const iterator begin, const Task& task,
+                             PrivateQueue<Task>& queue) {
+    // Check for base case
+    const auto n = task.end - task.begin;
+    IPS4OML_IS_NOT(n <= 2 * Cfg::kBaseCaseSize);
+
+    diff_t bucket_start[Cfg::kMaxBuckets + 1];
+
+    // Do the partitioning
+    const auto res =
+            partition<false>(begin + task.begin, begin + task.end, bucket_start, 0, 1);
+    const int num_buckets = std::get<0>(res);
+    const bool equal_buckets = std::get<1>(res);
+
+    // Final base case is executed in cleanup step, so we're done here
+    if (n <= Cfg::kSingleLevelThreshold) {
+        return;
+    }
+
+    // Recurse
+    if (equal_buckets) {
+        const auto start = bucket_start[num_buckets - 1];
+        const auto stop = bucket_start[num_buckets];
+        if (stop - start > 2 * Cfg::kBaseCaseSize) {
+            queue.emplace(task.begin + start, task.begin + stop);
+        }
+    }
+    for (int i = num_buckets - 1 - equal_buckets; i >= 0; i -= 1 + equal_buckets) {
+        const auto start = bucket_start[i];
+        const auto stop = bucket_start[i + 1];
+        if (stop - start > 2 * Cfg::kBaseCaseSize) {
+            queue.emplace(task.begin + start, task.begin + stop);
+        }
+    }
+}
+
+#endif  // _REENTRANT
 
 /**
  * Recursive entry point for sequential algorithm.
@@ -53,13 +98,37 @@ void Sorter<Cfg>::sequential(const iterator begin, const iterator end) {
     // Check for base case
     const auto n = end - begin;
     if (n <= 2 * Cfg::kBaseCaseSize) {
+#ifdef IPS4O_TIMER
+        g_overhead.stop();
+        g_base_case.start();
+#endif
+
         detail::baseCaseSort(begin, end, local_.classifier.getComparator());
+
+#ifdef IPS4O_TIMER
+        g_base_case.stop();
+        g_overhead.start();
+#endif
+
         return;
     }
+
+    sequential_rec(begin, end);
+}
+
+/**
+ * Recursive entry point for sequential algorithm.
+ */
+template <class Cfg>
+void Sorter<Cfg>::sequential_rec(const iterator begin, const iterator end) {
+    // Check for base case
+    const auto n = end - begin;
+    IPS4OML_IS_NOT(n <= 2 * Cfg::kBaseCaseSize);
+
     diff_t bucket_start[Cfg::kMaxBuckets + 1];
 
     // Do the partitioning
-    const auto res = partition<false>(begin, end, bucket_start, nullptr, 0, 1);
+    const auto res = partition<false>(begin, end, bucket_start, 0, 1);
     const int num_buckets = std::get<0>(res);
     const bool equal_buckets = std::get<1>(res);
 
@@ -94,27 +163,28 @@ class SequentialSorter {
     using iterator = typename Cfg::iterator;
 
  public:
-  explicit SequentialSorter(bool check_sorted, typename Cfg::less comp)
-    : check_sorted(check_sorted)
-    , buffer_storage_(1)
-            , local_ptr_(Cfg::kDataAlignment, std::move(comp), buffer_storage_.get()) {}
+    explicit SequentialSorter(bool check_sorted, typename Cfg::less comp)
+        : check_sorted_(check_sorted)
+        , buffer_storage_(1)
+        , local_ptr_(Cfg::kDataAlignment, std::move(comp), buffer_storage_.get()) {}
 
-    explicit SequentialSorter(bool check_sorted, typename Cfg::less comp, char* buffer_storage)
-            : check_sorted(check_sorted)
-    , local_ptr_(Cfg::kDataAlignment, std::move(comp), buffer_storage) {}
+    explicit SequentialSorter(bool check_sorted, typename Cfg::less comp,
+                              char* buffer_storage)
+        : check_sorted_(check_sorted)
+        , local_ptr_(Cfg::kDataAlignment, std::move(comp), buffer_storage) {}
 
     void operator()(iterator begin, iterator end) {
-      if (check_sorted) {
-        const bool sorted = detail::sortedCaseSort(begin, end,
-                                                   local_ptr_.get().classifier.getComparator());
-        if (sorted) return;
-      }
-  
+        if (check_sorted_) {
+            const bool sorted = detail::sortSimpleCases(
+                    begin, end, local_ptr_.get().classifier.getComparator());
+            if (sorted) return;
+        }
+
         Sorter(local_ptr_.get()).sequential(std::move(begin), std::move(end));
     }
 
  private:
-  const bool check_sorted;
+    const bool check_sorted_;
     typename Sorter::BufferStorage buffer_storage_;
     detail::AlignedPtr<typename Sorter::LocalData> local_ptr_;
 };

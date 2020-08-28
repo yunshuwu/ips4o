@@ -1,5 +1,5 @@
 /******************************************************************************
- * ips4o/buffers.hpp
+ * include/ips4o/buffers.hpp
  *
  * In-place Parallel Super Scalar Samplesort (IPS⁴o)
  *
@@ -54,8 +54,10 @@ class Sorter<Cfg>::Block {
     using value_type = typename Cfg::value_type;
 
  public:
-    static constexpr const bool kInitializedStorage = std::is_trivially_default_constructible<value_type>::value;
-    static constexpr const bool kDestruct = !kInitializedStorage && !std::is_trivially_destructible<value_type>::value;
+    static constexpr const bool kInitializedStorage =
+            std::is_trivially_default_constructible<value_type>::value;
+    static constexpr const bool kDestruct =
+            !kInitializedStorage && !std::is_trivially_destructible<value_type>::value;
 
     /**
      * Pointer to data.
@@ -75,9 +77,11 @@ class Sorter<Cfg>::Block {
     void readFrom(iterator src) {
         if (kInitializedStorage) {
             std::move(src, src + Cfg::kBlockSize, data());
-        } else for (auto p = data(), end = p + Cfg::kBlockSize; p < end; ++p) {
-            IPS4O_ASSUME_NOT(p == nullptr);
-            new (p) value_type(std::move(*src++));
+        } else {
+            for (auto p = data(), end = p + Cfg::kBlockSize; p < end; ++p) {
+                IPS4OML_ASSUME_NOT(p == nullptr);
+                new (p) value_type(std::move(*src++));
+            }
         }
     }
 
@@ -87,9 +91,11 @@ class Sorter<Cfg>::Block {
     void readFrom(iterator src, const diff_t n) {
         if (kInitializedStorage) {
             std::move(src, src + n, data());
-        } else for (auto p = data(), end = p + n; p < end; ++p) {
-            IPS4O_ASSUME_NOT(p == nullptr);
-            new (p) value_type(std::move(*src++));
+        } else {
+            for (auto p = data(), end = p + n; p < end; ++p) {
+                IPS4OML_ASSUME_NOT(p == nullptr);
+                new (p) value_type(std::move(*src++));
+            }
         }
     }
 
@@ -108,9 +114,12 @@ class Sorter<Cfg>::Block {
     void writeTo(Block& block) {
         if (kInitializedStorage) {
             std::move(data(), data() + Cfg::kBlockSize, block.data());
-        } else for (auto src = data(), dst = block.data(), end = src + Cfg::kBlockSize; src < end; ++src, ++dst) {
-            IPS4O_ASSUME_NOT(dst == nullptr);
-            new (dst) value_type(std::move(*src));
+        } else {
+            for (auto src = data(), dst = block.data(), end = src + Cfg::kBlockSize;
+                 src < end; ++src, ++dst) {
+                IPS4OML_ASSUME_NOT(dst == nullptr);
+                new (dst) value_type(std::move(*src));
+            }
         }
         if (kDestruct)
             for (auto p = data(), end = p + Cfg::kBlockSize; p < end; ++p)
@@ -128,8 +137,9 @@ class Sorter<Cfg>::Block {
     }
 
  private:
-    using storage_type = std::conditional_t<kInitializedStorage, value_type,
-                                            std::aligned_storage_t<sizeof(value_type), alignof(value_type)>>;
+    using storage_type = std::conditional_t<
+            kInitializedStorage, value_type,
+            std::aligned_storage_t<sizeof(value_type), alignof(value_type)>>;
     storage_type storage_[Cfg::kBlockSize];
 };
 
@@ -142,8 +152,7 @@ class Sorter<Cfg>::Buffers {
     using value_type = typename Cfg::value_type;
 
  public:
-    Buffers(char* storage) : storage_(static_cast<Block*>(static_cast<void*>(storage)))
-    {
+    Buffers(char* storage) : storage_(static_cast<Block*>(static_cast<void*>(storage))) {
         for (diff_t i = 0; i < Cfg::kMaxBuckets; ++i) {
             resetBuffer(i);
             buffer_[i].end = buffer_[i].ptr + Cfg::kBlockSize;
@@ -161,7 +170,8 @@ class Sorter<Cfg>::Buffers {
      * Pointer to buffer data.
      */
     value_type* data(const int i) {
-        return static_cast<value_type*>(static_cast<void*>(storage_)) + i * Cfg::kBlockSize;
+        return static_cast<value_type*>(static_cast<void*>(storage_))
+               + i * Cfg::kBlockSize;
     }
 
     /**
@@ -188,7 +198,7 @@ class Sorter<Cfg>::Buffers {
         if (Block::kInitializedStorage) {
             *buffer_[i].ptr++ = std::move(value);
         } else {
-            IPS4O_ASSUME_NOT(buffer_[i].ptr == nullptr);
+            IPS4OML_ASSUME_NOT(buffer_[i].ptr == nullptr);
             new (buffer_[i].ptr++) value_type(std::move(value));
         }
     }
@@ -213,15 +223,19 @@ class Sorter<Cfg>::Buffers {
     };
 
     void resetBuffer(const int i) {
-        buffer_[i].ptr = static_cast<value_type*>(static_cast<void*>(storage_)) + i * Cfg::kBlockSize;
+        buffer_[i].ptr = static_cast<value_type*>(static_cast<void*>(storage_))
+                         + i * Cfg::kBlockSize;
     }
 
     Info buffer_[Cfg::kMaxBuckets];
     Block* storage_;
     // Blocks should have no extra elements or padding
-    static_assert(sizeof(Block) == sizeof(typename Cfg::value_type) * Cfg::kBlockSize, "Block size mismatch.");
-    static_assert(std::is_trivially_default_constructible<Block>::value, "Block must be trivially default constructible.");
-    static_assert(std::is_trivially_destructible<Block>::value, "Block must be trivially destructible.");
+    static_assert(sizeof(Block) == sizeof(typename Cfg::value_type) * Cfg::kBlockSize,
+                  "Block size mismatch.");
+    static_assert(std::is_trivially_default_constructible<Block>::value,
+                  "Block must be trivially default constructible.");
+    static_assert(std::is_trivially_destructible<Block>::value,
+                  "Block must be trivially destructible.");
 };
 
 }  // namespace detail

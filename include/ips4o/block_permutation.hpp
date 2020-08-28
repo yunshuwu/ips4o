@@ -1,5 +1,5 @@
 /******************************************************************************
- * ips4o/block_permutation.hpp
+ * include/ips4o/block_permutation.hpp
  *
  * In-place Parallel Super Scalar Samplesort (IPS⁴o)
  *
@@ -82,7 +82,7 @@ int Sorter<Cfg>::classifyAndReadBlock(const int read_bucket) {
 }
 
 /**
- * Finds a slot for the block in the swap buffer. May or may not read another block instead.
+ * Finds a slot for the block in the swap buffer. May or may not read another block.
  */
 template <class Cfg>
 template <bool kEqualBuckets, bool kIsParallel>
@@ -134,10 +134,14 @@ void Sorter<Cfg>::permuteBlocks() {
     for (int count = num_buckets; count; --count) {
         int dest_bucket;
         // Try to read a block ...
-        while ((dest_bucket = classifyAndReadBlock<kEqualBuckets, kIsParallel>(read_bucket)) != -1) {
+        while ((dest_bucket =
+                        classifyAndReadBlock<kEqualBuckets, kIsParallel>(read_bucket))
+               != -1) {
             bool current_swap = 0;
             // ... then write it to the correct bucket
-            while ((dest_bucket = swapBlock<kEqualBuckets, kIsParallel>(max_off, dest_bucket, current_swap)) != -1) {
+            while ((dest_bucket = swapBlock<kEqualBuckets, kIsParallel>(
+                            max_off, dest_bucket, current_swap))
+                   != -1) {
                 // Read another block, keep going
                 current_swap = !current_swap;
             }

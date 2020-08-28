@@ -1,5 +1,5 @@
 /******************************************************************************
- * include/ips4o/utils.hpp
+ * include/ips4o/task.hpp
  *
  * In-place Parallel Super Scalar Samplesort (IPS⁴o)
  *
@@ -35,22 +35,22 @@
 
 #pragma once
 
-#include "cassert"
-
-#define IPS4OML_ASSUME_NOT(c) if (c) __builtin_unreachable()
-#define IPS4OML_IS_NOT(c) assert(!(c))
-
-#include <limits>
+#include <cstddef>
 
 namespace ips4o {
 namespace detail {
 
 /**
- * Compute the logarithm to base 2, rounded down.
+ * A subtask in the parallel algorithm.
+ * Uses indices instead of iterators to avoid unnecessary template instantiations.
  */
-inline constexpr unsigned long log2(unsigned long n) {
-    return (std::numeric_limits<unsigned long>::digits - 1 - __builtin_clzl(n));
-}
+struct Task {
+    Task() {}
+    Task(std::ptrdiff_t begin, std::ptrdiff_t end) : begin(begin), end(end) {}
+
+    std::ptrdiff_t begin;
+    std::ptrdiff_t end;
+};
 
 }  // namespace detail
 }  // namespace ips4o
