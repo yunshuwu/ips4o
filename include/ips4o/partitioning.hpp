@@ -105,7 +105,7 @@ std::pair<int, bool> Sorter<Cfg>::partition(const iterator begin, const iterator
         sequentialClassification(use_equal_buckets);
 
 #ifdef IPS4O_TIMER
-    g_classification.stop();
+    g_classification.stop(end - begin, "class");
     g_permutation.start();
 #endif
 
@@ -124,7 +124,7 @@ std::pair<int, bool> Sorter<Cfg>::partition(const iterator begin, const iterator
     if (kIsParallel) shared_->sync.barrier();
 
 #ifdef IPS4O_TIMER
-    g_permutation.stop();
+    g_permutation.stop(end - begin, "perm");
     g_cleanup.start();
 #endif
 

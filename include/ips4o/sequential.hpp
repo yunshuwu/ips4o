@@ -137,6 +137,10 @@ void Sorter<Cfg>::sequential_rec(const iterator begin, const iterator end) {
         return;
     }
 
+#ifdef IPS4O_TIMER
+    g_ips4o_level++;
+#endif
+
     // Recurse
     for (int i = 0; i < num_buckets; i += 1 + equal_buckets) {
         const auto start = bucket_start[i];
@@ -150,6 +154,11 @@ void Sorter<Cfg>::sequential_rec(const iterator begin, const iterator end) {
         if (stop - start > 2 * Cfg::kBaseCaseSize)
             sequential(begin + start, begin + stop);
     }
+
+#ifdef IPS4O_TIMER
+    g_ips4o_level--;
+#endif
+
 }
 
 }  // namespace detail
