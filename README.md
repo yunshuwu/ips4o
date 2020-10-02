@@ -51,6 +51,28 @@ An initial version of IPS⁴o has been described in our [publication](https://dr
 
 ## Usage
 
+Clone this repository and check out its submodule
+
+```bash
+git clone --recurse-submodules https://github.com/ips4o/ips4o.git
+```
+
+or use the following commands instead if you want to include this repository as a submodule:
+
+```bash
+git submodule add https://github.com/ips4o/ips4o.git
+git submodule update --recursive --init
+```
+
+IPS⁴o provides a CMake library for simple usage:
+
+```CMake
+add_subdirectory(<path-to-the-ips4o-repository>)
+target_link_libraries(<your-target> PRIVATE ips4o)
+```
+
+A minimal working example:
+
 ```C++
 #include "ips4o.hpp"
 
@@ -59,13 +81,6 @@ ips4o::sort(begin, end[, comparator]);
 
 // sort in parallel (uses OpenMP if available, std::thread otherwise)
 ips4o::parallel::sort(begin, end[, comparator]);
-```
-
-IPS⁴o provides a CMake library for simple usage:
-
-```CMake
-add_subdirectory(<path-to-this-folder>)
-target_link_libraries(<your-target> PRIVATE ips4o)
 ```
 
 The parallel version of IPS⁴o requires 16-byte atomic compare-and-exchange instructions to run the fastest.
