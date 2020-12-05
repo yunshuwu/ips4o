@@ -50,11 +50,12 @@ int main(int argc, char** argv) {
         e = dist(gen);
     }
 
-    // Sequential case
+#if defined(_REENTRANT)
+    ips4o::parallel::sort(v.begin(), v.end(), std::less<>{});
+#else
     ips4o::sort(v.begin(), v.end(), std::less<>{});
-    // Parallel case
-    // ips4o::parallel::sort(v.begin(), v.end(), std::less<>{});
-
+#endif
+    
     const bool sorted = std::is_sorted(v.begin(), v.end(), std::less<>{});
     std::cout << "Elements are sorted: " << std::boolalpha << sorted << std::endl;
 
