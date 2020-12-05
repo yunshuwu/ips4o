@@ -35,7 +35,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   endif()
 endif()
 
-option(IPS4O_DISABLE_PARALLEL "Enable parallel code of IPS4o" OFF)
+option(IPS4O_DISABLE_PARALLEL "Disable parallel code of IPS4o" OFF)
 if (NOT IPS4O_DISABLE_PARALLEL)
 
   set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
