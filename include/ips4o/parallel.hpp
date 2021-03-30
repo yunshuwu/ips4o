@@ -139,14 +139,14 @@ void Sorter<Cfg>::queueTasks(const diff_t stripe, const int id,
         if (equal_buckets) {
             const auto start = bucket_start[num_buckets - 1];
             const auto stop = bucket_start[num_buckets];
-            queueTask(start, stop);
+            if (start < stop) queueTask(start, stop);
         }
 
         // Skip equality buckets
         for (int i = num_buckets - 1 - equal_buckets; i >= 0; i -= 1 + equal_buckets) {
             const auto start = bucket_start[i];
             const auto stop = bucket_start[i + 1];
-            queueTask(start, stop);
+            if (start < stop) queueTask(start, stop);
         }
     }
 }
