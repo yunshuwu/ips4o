@@ -301,7 +301,7 @@ struct ExtendedConfig : public Cfg {
                                std::random_access_iterator_tag>::value,
                   "Iterator must be a random access iterator.");
     // Number of buckets is limited by switch in classifier
-    static_assert(Cfg::kLogBuckets <= 8, "Max. bucket count must be <= 512.");
+    static_assert(Cfg::kLogBuckets >=1, "Max. bucket count must be <= 512.");
     // The implementation of the block alignment limits the possible block sizes.
     static_assert((kBlockSize & (kBlockSize - 1)) == 0,
                   "Block size must be a power of two.");

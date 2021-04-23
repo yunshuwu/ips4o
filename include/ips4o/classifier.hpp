@@ -101,7 +101,7 @@ class Sorter<Cfg>::Classifier {
         const int log_buckets = log_buckets_;
         const bucket_type num_buckets = num_buckets_;
         IPS4OML_ASSUME_NOT(log_buckets < 1);
-        IPS4OML_ASSUME_NOT(log_buckets > 9);
+        IPS4OML_ASSUME_NOT(log_buckets > Cfg::kLogBuckets + 1);
 
         bucket_type b = 1;
         for (int l = 0; l < log_buckets; ++l)
@@ -114,26 +114,30 @@ class Sorter<Cfg>::Classifier {
     /**
      * Classifies all elements using a callback.
      */
-    template <bool kEqualBuckets, class Yield>
+    template <bool kEqualBuckets, class Yield> 
     void classify(iterator begin, iterator end, Yield&& yield) const {
-        switch (log_buckets_) {
-            case 1: classifyUnrolled<kEqualBuckets, 1>(begin, end, std::forward<Yield>(yield)); break;
-            case 2: classifyUnrolled<kEqualBuckets, 2>(begin, end, std::forward<Yield>(yield)); break;
-            case 3: classifyUnrolled<kEqualBuckets, 3>(begin, end, std::forward<Yield>(yield)); break;
-            case 4: classifyUnrolled<kEqualBuckets, 4>(begin, end, std::forward<Yield>(yield)); break;
-            case 5: classifyUnrolled<kEqualBuckets, 5>(begin, end, std::forward<Yield>(yield)); break;
-            case 6: classifyUnrolled<kEqualBuckets, 6>(begin, end, std::forward<Yield>(yield)); break;
-            case 7: classifyUnrolled<kEqualBuckets, 7>(begin, end, std::forward<Yield>(yield)); break;
-            case 8: classifyUnrolled<kEqualBuckets, 8>(begin, end, std::forward<Yield>(yield)); break;
-            default: IPS4OML_ASSUME_NOT(true);
-        }
+      classifySwitch<kEqualBuckets>(begin, end, std::forward<Yield>(yield),
+	std::make_integer_sequence<int, Cfg::kLogBuckets + 1>{});
+    }
+
+    /**
+     * Classifies all elements using a callback.
+     */
+  template <bool kEqualBuckets, class Yield, int...Args>
+  void classifySwitch(iterator begin, iterator end, Yield&& yield,
+		      std::integer_sequence<int, Args...>) const {
+    IPS4OML_ASSUME_NOT(log_buckets_ <= 0 && log_buckets_ >= sizeof...(Args));
+    ((Args == log_buckets_ &&
+      classifyUnrolled<kEqualBuckets, Args>(begin, end, std::forward<Yield>(yield)))
+     || ...);
     }
 
     /**
      * Classifies all elements using a callback.
      */
     template <bool kEqualBuckets, int kLogBuckets, class Yield>
-    void classifyUnrolled(iterator begin, const iterator end, Yield&& yield) const {
+    bool classifyUnrolled(iterator begin, const iterator end, Yield&& yield) const {
+
         constexpr const bucket_type kNumBuckets = 1l << (kLogBuckets + kEqualBuckets);
         constexpr const int kUnroll = Cfg::kUnrollClassifier;
         IPS4OML_ASSUME_NOT(begin >= end);
@@ -166,6 +170,7 @@ class Sorter<Cfg>::Classifier {
                 b = 2 * b + !comp_(*begin, sortedSplitter(b - kNumBuckets / 2));
             yield(b - kNumBuckets, begin);
         }
+	return true;
     }
 
  private:

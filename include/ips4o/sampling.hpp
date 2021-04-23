@@ -77,7 +77,7 @@ std::pair<int, bool> Sorter<Cfg>::buildClassifier(const iterator begin,
     int log_buckets = Cfg::logBuckets(n);
     int num_buckets = 1 << log_buckets;
     const auto step = std::max<diff_t>(1, Cfg::oversamplingFactor(n));
-    const auto num_samples = step * num_buckets - 1;
+    const auto num_samples = std::min(step * num_buckets - 1, n / 2);
 
     // Select the sample
     detail::selectSample(begin, end, num_samples, local_.random_generator);
