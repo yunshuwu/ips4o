@@ -1,0 +1,1 @@
+/usr/bin/c++  -march=native -O3 -DNDEBUG CMakeFiles/ips4o_example.dir/src/example.cpp.o -o ips4o_example  -pthread -ltbb -lrt -latomic 

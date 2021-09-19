@@ -1,0 +1,37 @@
+Elements are sorted: true
+Number of keys: n = 1000000000
+Key type: int
+Key range: (0, 2^64-1)
+Uniform distribution (64bit key, 64bit value)...
+Uniform parameter = 10
+ips4o::sample sort costs: 0.913666
+ips4o::sample sort costs: 0.85616
+ips4o::sample sort costs: 0.854574
+ips4o::sample sort costs: 0.885025
+ips4o::sample sort costs: 0.903293
+ips4o::sample sort costs: 0.859082
+(~Median) ips4o::sample_sort() running time: 0.85616
+Number of keys: n = 1000000000
+Key type: int
+Key range: (0, 2^64-1)
+Uniform distribution (64bit key, 64bit value)...
+Uniform parameter = 15000
+ips4o::sample sort costs: 0.900986
+ips4o::sample sort costs: 1.00738
+ips4o::sample sort costs: 0.928817
+ips4o::sample sort costs: 1.06712
+ips4o::sample sort costs: 0.851957
+ips4o::sample sort costs: 1.10919
+(~Median) ips4o::sample_sort() running time: 0.928817
+Number of keys: n = 1000000000
+Key type: int
+Key range: (0, 2^64-1)
+Uniform distribution (64bit key, 64bit value)...
+Uniform parameter = 15000
+ips4o::sample sort costs: 2.05561
+ips4o::sample sort costs: 2.0348
+ips4o::sample sort costs: 1.98406
+ips4o::sample sort costs: 1.99602
+ips4o::sample sort costs: 2.00032
+ips4o::sample sort costs: 1.98545
+(~Median) ips4o::sample_sort() running time: 1.98545
