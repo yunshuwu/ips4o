@@ -1,3 +1,0 @@
-/home/ywu380/ParallelAlgorithm/ips4o/build/CMakeFiles/edit_cache.dir
-/home/ywu380/ParallelAlgorithm/ips4o/build/CMakeFiles/rebuild_cache.dir
-/home/ywu380/ParallelAlgorithm/ips4o/build/CMakeFiles/ips4o_example.dir

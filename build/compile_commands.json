@@ -1,7 +1,0 @@
-[
-{
-  "directory": "/home/ywu380/ParallelAlgorithm/ips4o/build",
-  "command": "/usr/bin/c++  -I/home/ywu380/ParallelAlgorithm/ips4o/include  -march=native -O3 -DNDEBUG -pthread -std=gnu++14 -o CMakeFiles/ips4o_example.dir/src/example.cpp.o -c /home/ywu380/ParallelAlgorithm/ips4o/src/example.cpp",
-  "file": "/home/ywu380/ParallelAlgorithm/ips4o/src/example.cpp"
-}
-]
